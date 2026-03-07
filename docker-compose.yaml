@@ -6,9 +6,8 @@ networks:
         - subnet: 172.16.0.0/24
 
 services:
-  keycloak-init:
+  keycloak-initializer:
     image: alpine:3.19
-    container_name: keycloak_init
     depends_on:
       keycloak:
         condition: service_started
@@ -22,9 +21,8 @@ services:
       - KEYCLOAK_PASSWORD=${KEYCLOAK_PASSWORD}
     entrypoint: ["/bin/sh", "-c", "apk add --no-cache bash curl openjdk17-jre-headless && /opt/keycloak/keycloak-initialization.sh"]
 
-  nginx:
+  reverse-proxy:
     image: nginx:1.28.2
-    container_name: nginx_container
     ports:
       - "443:443"
     networks:
@@ -37,9 +35,8 @@ services:
       keycloak:
         condition: service_started
         
-  keycloak:
+  identity-provider:
     image: quay.io/keycloak/keycloak:26.4.6
-    container_name: keycloak_container
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,9 +60,8 @@ services:
       - --health-enabled=true
     restart: unless-stopped
 
-  postgres:
+  identity-provider-database:
     image: postgres:18.3
-    container_name: postgres_container
     environment:
       - POSTGRES_DB=keycloak
       - POSTGRES_USER=${POSTGRES_KEYCLOAK_USERNAME}
