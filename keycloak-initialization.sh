@@ -7,7 +7,7 @@ delay=3
 max_tries=10
 tries=0
 
-while ! curl -sf -o /dev/null http://keycloak:9000/health/ready; do
+while ! curl -sf -o /dev/null http://identity-provider:9000/health/ready; do
     if [ $tries -ge $max_tries ]; then
         echo "Keycloak did not become ready in time. Exiting."
         exit 1
@@ -23,7 +23,7 @@ echo "Keycloak is ready."
 # Try login with temporary admin
 TEMP_LOGIN_EXISTS=true
 if ! /opt/keycloak/bin/kcadm.sh config credentials \
-      --server http://keycloak:8080 \
+      --server http://identity-provider:8080 \
       --realm master \
       --user "keycloak_temp_admin" \
       --password "$KEYCLOAK_PASSWORD"; then
