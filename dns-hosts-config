@@ -1,0 +1,9 @@
+.:53 {
+    hosts {
+        // gateway: 10.173.243.1
+        auth-admin.localhost 10.173.243.1
+        fallthrough
+    }
+    forward . 1.1.1.1
+    log
+}

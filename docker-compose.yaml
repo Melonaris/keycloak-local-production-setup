@@ -1,15 +1,44 @@
 networks:
   keycloak_network:
     driver: bridge
+  vpn_network:
+    driver: bridge
     ipam:
       config:
         - subnet: 172.16.0.0/24
 
 services:
+  vpn_server:
+    image: lscr.io/linuxserver/wireguard:1.0.20250521
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Zurich
+      - SERVERURL=vpn.localhost
+      - SERVERPORT=58999
+      - PEERS=10
+      - PEERDNS=auto
+      - ALLOWEDIPS=10.173.243.0/24
+      - INTERNAL_SUBNET=10.173.243.0/24
+    entrypoint: ["/bin/sh", "-c", "mkdir -p /config/coredns && cp /Corefile /config/coredns/Corefile && exec /init"]
+    volumes:
+      - wireguard:/config
+      - ./dns-hosts-config:/Corefile
+    ports:
+      - "58999:58999/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    networks:
+      - vpn_network
+
   keycloak-initializer:
     image: alpine:3.19
     depends_on:
-      keycloak:
+      reverse-proxy:
         condition: service_started
     networks:
       - keycloak_network
@@ -27,32 +56,38 @@ services:
       - "443:443"
     networks:
       - keycloak_network
+      - vpn_network
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/nginx/certs:ro
     restart: unless-stopped
     depends_on:
-      keycloak:
+      identity-provider:
         condition: service_started
-        
+
   identity-provider:
     image: quay.io/keycloak/keycloak:26.4.6
     depends_on:
-      postgres:
+      identity-provider-database:
         condition: service_healthy
     environment:
       - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://postgres/keycloak
+      - KC_DB_URL=jdbc:postgresql://identity-provider-database/keycloak
       - KC_DB_USERNAME=${POSTGRES_KEYCLOAK_USERNAME}
       - KC_DB_PASSWORD=${POSTGRES_KEYCLOAK_PASSWORD}
       - KC_HOSTNAME=auth.localhost
     networks:
       - keycloak_network
+    ports:
+      - "58080:8080"
+      - "59000:9000"
     volumes:
       - keycloak_cli:/opt/keycloak
     command:
       - start
       - --http-enabled=true
+      - --http-host=0.0.0.0
+      - --hostname-strict=false
       - --proxy-headers=xforwarded
       - --proxy-trusted-addresses=172.16.0.0/24
       - --bootstrap-admin-username=keycloak_temp_admin
@@ -81,3 +116,4 @@ services:
 volumes:
   keycloak_data:
   keycloak_cli:
+  wireguard:

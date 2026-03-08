@@ -33,8 +33,8 @@ To start the setup after configuration follow the instructions below.
 ## Only On First Start
 ONLY USE ON FIRST START!
 This will automatically build the containers and create the users specified in the .env file.
-`docker compose up -d postgres keycloak nginx && docker compose run --rm keycloak-init`
+`docker compose up -d vpn_server reverse-proxy identity-provider identity-provider-database && docker compose run --rm keycloak-initializer`
 
 ## General Restart
 Use this to restart your services after your [docker network has been initialized](#only-on-first-start).
-`docker compose up -d postgres keycloak nginx`
+`docker compose up -d vpn_server reverse-proxy identity-provider identity-provider-database`
